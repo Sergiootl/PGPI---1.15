@@ -105,6 +105,14 @@ El proyecto será gestionado siguiendo la **Guía PMBOK (PMI)** y sus cinco grup
 ---
 
 ## 👥 Equipo de Práctica  
-- **Equipo Director del Proyecto**: *[Nombres del grupo]*  
-- **Equipo de Desarrollo**: *[Nombres del grupo]*  
-- **Patrocinador**: *Profesor de prácticas*  
+- **Equipo Director del Proyecto**: *Jesús Ramirez Martinez
+Álvaro Vázquez Conejo
+Maria Jose Ruiz Vázquez 
+Sergio Terrazas Lobato
+*  
+- **Equipo de Desarrollo**: *Jesús Ramirez Martinez
+Álvaro Vázquez Conejo
+Maria Jose Ruiz Vázquez 
+Sergio Terrazas Lobato
+*  
+- **Patrocinador**: *José González*  
