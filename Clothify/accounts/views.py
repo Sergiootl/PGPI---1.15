@@ -46,11 +46,11 @@ def registro(request):
             user.set_password(form.cleaned_data["password"])
             user.save()
 
-            # 🔐 loguear automáticamente
+        
             login(request, user)
             messages.success(request, "¡Registro completado! Bienvenido.")
 
-            # ir a 'next' si venía, o al catálogo
+          
             target = request.POST.get("next") or getattr(settings, "LOGIN_REDIRECT_URL", None) or "productos:catalogo"
             return redirect(resolve_url(target))
     else:
@@ -77,7 +77,7 @@ def login_view(request):
         if user:
             login(request, user)
             messages.success(request, "Has iniciado sesión.")
-            return redirect(target)   # <-- NO resolve_url: redirect acepta rutas o nombres
+            return redirect(target)   
         messages.error(request, "Credenciales inválidas.")
     return render(request, "accounts/login.html", {"next": nxt})
 
@@ -158,3 +158,10 @@ def logout_view(request):
     logout(request)
     messages.info(request, "Has cerrado sesión.")   # ← solo aquí
     return redirect(resolve_url(getattr(settings, "LOGOUT_REDIRECT_URL", "accounts:login")))
+
+
+@login_required
+def after_login(request):
+    if request.user.is_staff:
+        return redirect("gestion:dashboard")
+    return redirect("productos:catalogo")

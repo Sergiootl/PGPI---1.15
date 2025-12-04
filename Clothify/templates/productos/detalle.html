@@ -2,32 +2,197 @@
 {% load static %}
 
 {% block title %}{{ producto.nombre }}{% endblock %}
+{% block page_title %}{{ producto.nombre }}{% endblock %}
+{% block page_subtitle %}
+  {% if producto.categoria %}{{ producto.categoria.nombre }}{% endif %}
+  {% if producto.marca %} · {{ producto.marca.nombre }}{% endif %}
+{% endblock %}
+
+{% block extra_head %}
+{{ block.super }}
+<style>
+  /* CONTENEDOR DEL MOCKUP */
+  #preview-wrapper {
+    padding: 2.2rem;
+    background: radial-gradient(circle at top, #ffffff 0, #f2f2f2 45%, #e4e4e4 100%);
+    border-radius: 18px;
+    box-shadow:
+      0 18px 45px rgba(0,0,0,0.25),
+      0 0 0 1px rgba(0,0,0,0.04);
+    position: relative;
+    overflow: hidden;
+    transform: perspective(1200px) rotateX(8deg);
+    transform-origin: center bottom;
+    transition: transform 0.35s ease, box-shadow 0.35s ease;
+  }
+
+  #preview-wrapper:hover {
+    transform: perspective(1200px) rotateX(0deg);
+    box-shadow:
+      0 26px 70px rgba(0,0,0,0.35),
+      0 0 0 1px rgba(0,0,0,0.06);
+  }
+
+  /* IMAGEN BASE DE LA PRENDA */
+  #preview-wrapper img {
+    max-height: 460px;
+    max-width: 100%;
+    object-fit: contain;
+    display: block;
+  }
+
+  #preview-img {
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    filter:
+      drop-shadow(0 10px 18px rgba(0,0,0,0.25))
+      drop-shadow(0 4px 8px rgba(0,0,0,0.18));
+  }
+
+  /* cuando cambiamos de estilo (pantalón roto, etc.) */
+  #preview-wrapper.changing #preview-img {
+    opacity: 0;
+    transform: translateY(4px) scale(0.99);
+  }
+
+  #preview-wrapper.ready #preview-img {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  /* TEXTO IMPRESO SOBRE LA PRENDA */
+  .preview-text {
+    position: absolute;
+    top: 48%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 32px;
+    font-weight: 600;
+    color: #ffffff;
+    text-align: center;
+    max-width: 70%;
+    word-wrap: break-word;
+    line-height: 1.1;
+    opacity: 0;
+    z-index: 2;
+    font-family: 'UnifrakturMaguntia', cursive;
+    cursor: move;
+    filter: drop-shadow(0 1px 1px rgba(0,0,0,0.45));
+    text-shadow:
+      0 0 2px rgba(0,0,0,0.8),
+      0 0 4px rgba(0,0,0,0.6);
+  }
+
+  /* LOGO IMPRESO SOBRE LA PRENDA */
+  .preview-logo {
+    position: absolute;
+    top: 58%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    max-width: 40%;
+    max-height: 30%;
+    object-fit: contain;
+    opacity: 0;
+    z-index: 1;
+    pointer-events: auto;
+    cursor: move;
+
+    /* colores reales, sin oscurecerse en negro */
+    mix-blend-mode: normal;
+
+    /* relieve y ligera integración */
+    filter:
+      drop-shadow(0 4px 10px rgba(0,0,0,0.45));
+
+    transition: opacity 0.25s ease, transform 0.25s ease;
+  }
+
+  .preview-logo.ready {
+    opacity: 1;
+  }
+
+  .preview-logo.changing {
+    opacity: 0;
+    transform: translate(-50%, -46%);
+  }
+
+  /* un pelín más pequeño en pantallas estrechas */
+  @media (max-width: 768px) {
+    .preview-text {
+      font-size: 26px;
+    }
+    #preview-wrapper {
+      padding: 1.6rem;
+    }
+  }
+</style>
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"
+        integrity="sha512-BNa5lU3b5vT0N9X9G2G4SrbWW+hfjiQinM3JR2WcKqPzdrYfZL9QfY8pV2OZZhTg1K0GqfC3Qmq3j0CwM8FSQ=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+{% endblock %}
 
 {% block content %}
-<h1 class="mb-3">{{ producto.nombre }}</h1>
-
 <div class="row g-4">
+
   <!-- Imagen / preview -->
   <div class="col-md-6">
-    <img id="preview-img"
-         src="{% if producto.imagen %}{{ producto.imagen.url }}{% else %}{% static 'img/placeholder.png' %}{% endif %}"
-         class="img-fluid rounded border w-100"
-         alt="{{ producto.nombre }}">
+    <div id="preview-wrapper"
+         class="bg-light border-0 rounded-3 shadow-sm d-flex align-items-center justify-content-center p-3 position-relative ready">
+      <img id="preview-img"
+           src="
+           {% if producto.imagen %}
+             {{ producto.imagen.url }}
+           {% else %}
+             {% with nombre=producto.nombre|lower %}
+               {% if 'tirantas' in nombre %}
+                 {% static 'img/tirantas.png' %}
+               {% elif 'sudadera' in nombre %}
+                 {% static 'img/sudadera.png' %}
+               {% elif 'gorra' in nombre %}
+                 {% static 'img/gorrilla.png' %}
+               {% elif 'pantal' in nombre %}
+                 {% static 'img/pantalon-estandar.png' %}
+               {% else %}
+                 {% static 'img/cami.png' %}
+               {% endif %}
+             {% endwith %}
+           {% endif %}
+           "
+           alt="{{ producto.nombre }}">
+
+      
+      <img id="preview-logo" class="preview-logo" alt="Logo preview">
+
+      <!-- Texto sobre la prenda -->
+      <div id="preview-text" class="preview-text"></div>
+    </div>
   </div>
 
   <!-- Info + formulario -->
   <div class="col-md-6">
+    <div class="mb-2 d-flex align-items-center gap-2">
+      {% if producto.permite_personalizacion %}
+        <span class="badge text-bg-warning text-dark">Personalizable</span>
+      {% endif %}
+      {% if producto.stock == 0 %}
+        <span class="badge text-bg-danger">Agotado</span>
+      {% else %}
+        <span class="badge text-bg-success">En stock</span>
+      {% endif %}
+    </div>
+
     <p class="text-muted mb-2">
       {% if producto.categoria %}Categoría: <strong>{{ producto.categoria.nombre }}</strong>{% endif %}
       {% if producto.marca %} · Marca: <strong>{{ producto.marca.nombre }}</strong>{% endif %}
     </p>
 
-    <p class="fs-4 fw-semibold mb-2">
-      {{ producto.precio }} {{ MONEDA|default:"€" }}
+    <p class="fs-3 fw-semibold mb-1">
+      <span id="precio-label">{{ producto.precio }}</span> {{ MONEDA|default:"€" }}
     </p>
 
     {% if producto.descripcion %}
-      <p class="mb-3">{{ producto.descripcion }}</p>
+      <p class="mb-3 text-muted">{{ producto.descripcion }}</p>
     {% endif %}
 
     <!-- Formulario add-to-cart -->
@@ -37,6 +202,7 @@
           enctype="multipart/form-data">
       {% csrf_token %}
 
+      {# Variantes (si las hubiera) #}
       {% if tallas or colores %}
       <div class="row g-2">
         {% if tallas %}
@@ -44,7 +210,9 @@
           <label class="form-label">Talla</label>
           <select name="var_talla" class="form-select">
             <option value="">Selecciona talla</option>
-            {% for t in tallas %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+            {% for t in tallas %}
+              <option value="{{ t }}">{{ t }}</option>
+            {% endfor %}
           </select>
         </div>
         {% endif %}
@@ -53,7 +221,9 @@
           <label class="form-label">Color</label>
           <select name="var_color" class="form-select">
             <option value="">Selecciona color</option>
-            {% for c in colores %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+            {% for c in colores %}
+              <option value="{{ c }}">{{ c }}</option>
+            {% endfor %}
           </select>
         </div>
         {% endif %}
@@ -61,34 +231,129 @@
       {% endif %}
 
       {% if producto.permite_personalizacion %}
-      <hr class="my-2">
-      <h5 class="mb-2">Personalización</h5>
+        {% with nombre=producto.nombre|lower %}
+          {% if 'pantal' in nombre %}
+            {# ------- PERSONALIZACIÓN PANTALÓN ------- #}
+            <div class="border rounded-3 p-3 bg-light text-dark">
+              <h5 class="h6 mb-3 text-dark">Personalización</h5>
 
-      <div class="mb-2">
-        <label class="form-label">Texto</label>
-        <input type="text" name="texto" class="form-control" maxlength="30" placeholder="Tu texto…">
-      </div>
+              <div class="mb-2">
+                <label class="form-label">Estilo del pantalón</label>
+                <select name="pantalon_estilo"
+                        id="pantalon-estilo"
+                        class="form-select">
+                  <option value="estandar">Normal (sin rotos ni parches)</option>
+                  <option value="roto">
+                    Roto (+{{ producto.precio_personalizacion_color }} {{ MONEDA|default:"€" }})
+                  </option>
+                  <option value="parche">
+                    Con parche (+{{ producto.precio_personalizacion_textura }} {{ MONEDA|default:"€" }})
+                  </option>
+                  <option value="roto-parche">
+                    Roto + parche (+{{ producto.precio_personalizacion_color|add:producto.precio_personalizacion_textura }} {{ MONEDA|default:"€" }})
+                  </option>
+                </select>
+                <div class="form-text">
+                  Elige el acabado del pantalón. La imagen y el precio se actualizarán automáticamente.
+                </div>
+              </div>
+            </div>
+          {% else %}
+            
+            <div class="border rounded-3 p-3 bg-light text-dark">
+              <h5 class="h6 mb-3 text-dark">Personalización</h5>
 
-      <div class="mb-2">
-        <label class="form-label">Color del texto</label>
-        <input type="text" name="color_texto" class="form-control" value="#ffffff" placeholder="#RRGGBB">
-      </div>
+              <div class="mb-3">
+                <label class="form-label">Texto (opcional)</label>
+                <input type="text" name="texto"
+                       class="form-control"
+                       maxlength="20"
+                       placeholder="Ej: Ana, Equipo Alfa…">
+                <div class="form-text">Se aplicará un recargo si añades texto.</div>
 
-      <div class="mb-2">
-        <label class="form-label">Imagen (opcional)</label>
-        <input type="file" name="imagen" class="form-control" accept="image/*">
-      </div>
+                <label class="form-label mt-2 mb-1 small">Estilo de letra</label>
+                <select name="estilo_fuente" id="font-style" class="form-select form-select-sm">
+                  <option value="gothic" selected>Gótica</option>
+                  <option value="sans">Negrita moderna</option>
+                  <option value="script">Caligrafía</option>
+                  <option value="serif">Clásica</option>
+                </select>
 
-      <button class="btn btn-outline-secondary" type="button" id="btn-preview">
-        Generar vista previa
-      </button>
+                <label class="form-label mt-2 mb-1 small">Tamaño del texto</label>
+                <input type="range" id="text-size" min="70" max="130" value="100"
+                       class="form-range">
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">Color del texto</label>
+
+                <div class="d-flex align-items-center gap-2 mb-2">
+                  <input type="color"
+                         name="color_texto_picker"
+                         class="form-control form-control-color"
+                         value="#ffffff"
+                         title="Elige el color del texto">
+                  <span class="small text-dark">Color seleccionado</span>
+                </div>
+
+                <div class="d-flex flex-wrap gap-2 mb-1" id="color-preset-list">
+                  <button type="button" class="btn p-0 border rounded-circle color-pill"
+                          data-color-pill data-color="#ffffff"
+                          title="Blanco"
+                          style="width:24px;height:24px;background:#ffffff;"></button>
+                  <button type="button" class="btn p-0 border rounded-circle color-pill"
+                          data-color-pill data-color="#000000"
+                          title="Negro"
+                          style="width:24px;height:24px;background:#000000;"></button>
+                  <button type="button" class="btn p-0 border rounded-circle color-pill"
+                          data-color-pill data-color="#ff0000"
+                          title="Rojo"
+                          style="width:24px;height:24px;background:#ff0000;"></button>
+                  <button type="button" class="btn p-0 border rounded-circle color-pill"
+                          data-color-pill data-color="#007bff"
+                          title="Azul"
+                          style="width:24px;height:24px;background:#007bff;"></button>
+                  <button type="button" class="btn p-0 border rounded-circle color-pill"
+                          data-color-pill data-color="#28a745"
+                          title="Verde"
+                          style="width:24px;height:24px;background:#28a745;"></button>
+                  <button type="button" class="btn p-0 border rounded-circle color-pill"
+                          data-color-pill data-color="#ffc107"
+                          title="Amarillo"
+                          style="width:24px;height:24px;background:#ffc107;"></button>
+                </div>
+
+                <div class="form-text">
+                  Haz clic en un color o usa el selector.
+                </div>
+
+                <input type="hidden" name="color_texto" value="#ffffff">
+              </div>
+
+              <div class="mb-0">
+                <label class="form-label">Imagen / logo (opcional)</label>
+                <input type="file"
+                       name="imagen"
+                       class="form-control"
+                       accept="image/*">
+                <div class="form-text">
+                  Si subes un logo o imagen, se aplicará el recargo de textura.
+                </div>
+
+                <label class="form-label mt-2 mb-1 small">Tamaño del logo</label>
+                <input type="range" id="logo-size" min="50" max="150" value="100"
+                       class="form-range">
+              </div>
+            </div>
+          {% endif %}
+        {% endwith %}
       {% endif %}
 
-      <!-- Meta para carrito (variantes / personalización) -->
+      <!-- Meta para carrito -->
       <input type="hidden" name="meta_json" id="meta-json" value="{}">
 
       <!-- Cantidad + CTA -->
-      <div class="d-flex align-items-center gap-2 flex-wrap" style="max-width: 340px;">
+      <div class="d-flex align-items-center gap-2 flex-wrap" style="max-width: 360px;">
         <div class="d-flex align-items-center gap-2">
           <input type="number"
                  name="qty"
@@ -124,44 +389,310 @@
 {% endblock %}
 
 {% block extra_js %}
+{{ block.super }}
 <script>
-(function(){
-  const btn = document.getElementById('btn-preview');
-  if (!btn) return;
+  (function(){
+    const PRECIO_BASE = parseFloat("{{ producto.precio }}");
+    const PERMITE_PERS = {{ producto.permite_personalizacion|yesno:"true,false" }};
+    const PRECIO_NOMBRE  = parseFloat("{{ producto.precio_personalizacion_nombre|default:'0' }}".replace(',', '.')) || 0;
+    const PRECIO_COLOR   = parseFloat("{{ producto.precio_personalizacion_color|default:'0' }}".replace(',', '.')) || 0;
+    const PRECIO_TEXTURA = parseFloat("{{ producto.precio_personalizacion_textura|default:'0' }}".replace(',', '.')) || 0;
 
-  btn.addEventListener('click', async function(){
-    const form = new FormData();
-    const texto = document.querySelector('[name="texto"]')?.value || '';
-    const color = document.querySelector('[name="color_texto"]')?.value || '#ffffff';
+    const metaInput       = document.getElementById('meta-json');
+    const imgTag          = document.getElementById('preview-img');
+    const previewText     = document.getElementById('preview-text');
+    const previewLogo     = document.getElementById('preview-logo');
+    const textoInput      = document.querySelector('[name="texto"]');
+    const fontSelect      = document.getElementById('font-style');
+    const textSizeSlider  = document.getElementById('text-size');
+    const logoSizeSlider  = document.getElementById('logo-size');
+    const previewWrapper  = document.getElementById('preview-wrapper');
+
+    let baseTextSize = 32;
+    let currentLogoUrl = null;
+    let dragTarget = null;
+    let dragOffsetX = 0;
+    let dragOffsetY = 0;
+
+    const FONT_MAP = {
+      gothic: "'UnifrakturMaguntia', cursive",
+      sans: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+      script: "'Dancing Script', cursive",
+      serif: "'Times New Roman', 'Georgia', serif"
+    };
+
+    /* ===== tamaño texto ===== */
+    function applyTextSize() {
+      if (!previewText) return;
+      let size = baseTextSize;
+      if (textSizeSlider) {
+        const factor = parseInt(textSizeSlider.value || "100", 10) / 100;
+        size = baseTextSize * factor;
+      }
+      previewText.style.fontSize = size + "px";
+    }
+
+    function updatePreviewTexto() {
+      if (!previewText || !textoInput) return;
+      const value = (textoInput.value || "").trim();
+
+      previewText.textContent = value;
+      previewText.style.opacity = value ? "1" : "0";
+
+      let size = 32;
+      const len = value.length;
+      if (len > 8)  size = 28;
+      if (len > 12) size = 24;
+      if (len > 16) size = 20;
+      if (len > 20) size = 18;
+
+      baseTextSize = size;
+      applyTextSize();
+    }
+
+    if (textSizeSlider) {
+      textSizeSlider.addEventListener('input', applyTextSize);
+    }
+
+    /* ===== tamaño logo ===== */
+    function applyLogoSize() {
+      if (!previewLogo || !logoSizeSlider) return;
+      const factor = parseInt(logoSizeSlider.value || "100", 10) / 100;
+      const baseWidth = 40;
+      previewLogo.style.maxWidth = (baseWidth * factor) + "%";
+    }
+
+    if (logoSizeSlider) {
+      logoSizeSlider.addEventListener('input', applyLogoSize);
+    }
+
+    /* ===== fuente ===== */
+    function updateFontFromSelect() {
+      if (!previewText || !fontSelect) return;
+      const key = fontSelect.value || 'gothic';
+      const family = FONT_MAP[key] || FONT_MAP.gothic;
+      previewText.style.fontFamily = family;
+    }
+
+    /* ===== precio ===== */
+    function updatePrecio() {
+      let total = PRECIO_BASE;
+
+      const imagenField = document.querySelector('[name="imagen"]');
+      const hasImagen = imagenField ? !!imagenField.files.length : false;
+      const pantalonSelect = document.getElementById('pantalon-estilo');
+
+      if (pantalonSelect) {
+        const estilo = pantalonSelect.value;
+        if (estilo === "roto" || estilo === "roto-parche") {
+          total += PRECIO_COLOR;
+        }
+        if (estilo === "parche" || estilo === "roto-parche") {
+          total += PRECIO_TEXTURA;
+        }
+      } else if (PERMITE_PERS) {
+        const texto = (document.querySelector('[name="texto"]')?.value || "").trim();
+        const colorTexto = (document.querySelector('[name="color_texto"]')?.value || "").toLowerCase();
+
+        if (texto) total += PRECIO_NOMBRE;
+
+        const coloresBasicos = ["", "#ffffff", "#fff", "#000000", "#000"];
+        if (!coloresBasicos.includes(colorTexto)) {
+          total += PRECIO_COLOR;
+        }
+
+        if (hasImagen) {
+          total += PRECIO_TEXTURA;
+        }
+      }
+
+      const label = document.getElementById('precio-label');
+      if (label && !isNaN(total)) {
+        label.textContent = total.toFixed(2);
+      }
+    }
+
+    /* ===== pantalones (cambio de mockup) ===== */
+    const pantalonSelect = document.getElementById('pantalon-estilo');
+    if (pantalonSelect) {
+      const imgBase       = "{% static 'img/pantalon-estandar.png' %}";
+      const imgRoto       = "{% static 'img/pantalon-roto.png' %}";
+      const imgParche     = "{% static 'img/pantalon-parche.png' %}";
+      const imgRotoParche = "{% static 'img/pantalon-roto-parche.png' %}";
+
+      function actualizarPantalon() {
+        if (previewWrapper) {
+          previewWrapper.classList.remove('ready');
+          previewWrapper.classList.add('changing');
+        }
+
+        const estilo = pantalonSelect.value;
+        let previewUrl = imgBase;
+
+        if (estilo === "roto") previewUrl = imgRoto;
+        else if (estilo === "parche") previewUrl = imgParche;
+        else if (estilo === "roto-parche") previewUrl = imgRotoParche;
+
+        if (imgTag) {
+          imgTag.onload = function () {
+            if (previewWrapper) {
+              previewWrapper.classList.remove('changing');
+              previewWrapper.classList.add('ready');
+            }
+          };
+          imgTag.src = previewUrl;
+        }
+
+        const meta = {
+          personalizacion: {
+            tipo: "pantalon",
+            estilo: estilo,
+            preview_url: previewUrl
+          }
+        };
+        metaInput.value = JSON.stringify(meta);
+
+        updatePrecio();
+      }
+
+      pantalonSelect.addEventListener('change', actualizarPantalon);
+      actualizarPantalon();
+    }
+
+    /* ===== color texto ===== */
+    const colorPicker = document.querySelector('[name="color_texto_picker"]');
+    const colorHidden = document.querySelector('[name="color_texto"]');
+    const pills       = document.querySelectorAll('[data-color-pill]');
+
+    function setColor(color) {
+      if (colorPicker) colorPicker.value = color;
+      if (colorHidden) colorHidden.value = color;
+      if (previewText) previewText.style.color = color;
+      updatePrecio();
+    }
+
+    if (colorPicker && colorHidden) {
+      colorPicker.addEventListener('input', function(){
+        const color = this.value;
+        colorHidden.value = color;
+        if (previewText) previewText.style.color = color;
+        updatePrecio();
+      });
+    }
+
+    pills.forEach(function(btn){
+      btn.addEventListener('click', function(){
+        const c = this.getAttribute('data-color');
+        setColor(c);
+      });
+    });
+
+    /* ===== input texto ===== */
+    if (textoInput) {
+      textoInput.addEventListener('input', function () {
+        updatePreviewTexto();
+        updatePrecio();
+      });
+    }
+
+    /* ===== cambio de fuente ===== */
+    if (fontSelect) {
+      fontSelect.addEventListener('change', function () {
+        updateFontFromSelect();
+      });
+    }
+
+    /* ===== logo (archivo subido) ===== */
     const imagenField = document.querySelector('[name="imagen"]');
-    if (imagenField && imagenField.files.length) {
-      form.append('imagen', imagenField.files[0]);
+    if (imagenField) {
+      imagenField.addEventListener('change', function () {
+        updatePrecio();
+
+        if (!previewLogo) return;
+
+        if (currentLogoUrl) {
+          URL.revokeObjectURL(currentLogoUrl);
+          currentLogoUrl = null;
+        }
+
+        const file = this.files && this.files[0];
+
+        if (file) {
+          const url = URL.createObjectURL(file);
+          currentLogoUrl = url;
+
+          previewLogo.classList.remove('ready');
+          previewLogo.classList.add('changing');
+
+          previewLogo.onload = function () {
+            previewLogo.classList.remove('changing');
+            previewLogo.classList.add('ready');
+          };
+
+          previewLogo.src = url;
+          applyLogoSize();
+        } else {
+          previewLogo.src = '';
+          previewLogo.classList.remove('ready', 'changing');
+          previewLogo.style.opacity = '0';
+        }
+      });
     }
-    form.append('texto', texto);
-    form.append('color_texto', color);
-    form.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
 
-    try {
-      const url = "{% url 'productos:producto_preview' producto.slug %}";
-      const res = await fetch(url, { method: 'POST', body: form });
-      if (!res.ok) throw new Error();
-      const data = await res.json();
+    /* ===== drag texto + logo ===== */
+    function onDragStart(e) {
+      const target = e.target;
+      if (target !== previewText && target !== previewLogo) return;
+      if (!previewWrapper) return;
 
-      // Actualiza preview visual
-      const img = document.getElementById('preview-img');
-      if (data.preview_url) img.src = data.preview_url;
+      dragTarget = target;
+      const rect = dragTarget.getBoundingClientRect();
+      dragOffsetX = e.clientX - rect.left;
+      dragOffsetY = e.clientY - rect.top;
 
-      // Actualiza meta para el carrito
-      const meta = { personalizacion: { texto: texto, color_texto: color, preview_url: data.preview_url || null } };
-      const t = document.querySelector('[name="var_talla"]')?.value || null;
-      const c = document.querySelector('[name="var_color"]')?.value || null;
-      if (t) meta.talla = t;
-      if (c) meta.color = c;
-      document.getElementById('meta-json').value = JSON.stringify(meta);
-    } catch (e) {
-      alert('Error generando la vista previa. Inténtalo de nuevo.');
+      document.addEventListener('mousemove', onDragging);
+      document.addEventListener('mouseup', onDragEnd);
     }
-  });
-})();
+
+    function onDragging(e) {
+      if (!dragTarget || !previewWrapper) return;
+
+      const wrapperRect = previewWrapper.getBoundingClientRect();
+      const elemRect = dragTarget.getBoundingClientRect();
+
+      let x = e.clientX - wrapperRect.left - dragOffsetX + elemRect.width / 2;
+      let y = e.clientY - wrapperRect.top - dragOffsetY + elemRect.height / 2;
+
+      const halfW = elemRect.width / 2;
+      const halfH = elemRect.height / 2;
+
+      x = Math.max(halfW, Math.min(wrapperRect.width  - halfW, x));
+      y = Math.max(halfH, Math.min(wrapperRect.height - halfH, y));
+
+      dragTarget.style.left = x + "px";
+      dragTarget.style.top  = y + "px";
+      dragTarget.style.transform = "translate(-50%, -50%)";
+    }
+
+    function onDragEnd() {
+      document.removeEventListener('mousemove', onDragging);
+      document.removeEventListener('mouseup', onDragEnd);
+      dragTarget = null;
+    }
+
+    if (previewWrapper) {
+      previewWrapper.addEventListener('mousedown', onDragStart);
+    }
+
+    /* ===== inicializar ===== */
+    updatePreviewTexto();
+    updateFontFromSelect();
+    if (colorHidden && previewText && colorHidden.value) {
+      previewText.style.color = colorHidden.value;
+    }
+    applyTextSize();
+    applyLogoSize();
+    updatePrecio();
+  })();
 </script>
 {% endblock %}
